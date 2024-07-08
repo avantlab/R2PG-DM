@@ -5,17 +5,27 @@ import lombok.Setter;
 
 import java.io.File;
 import java.io.IOException;
+import java.nio.file.Files;
+import java.nio.file.Paths;
 import java.sql.DatabaseMetaData;
 import java.sql.ResultSet;
 import java.util.List;
 import java.util.Map;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Collections;
 import java.util.HashMap;
+import java.util.Set;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
+import java.util.HashSet;
 
 import org.antlr.v4.runtime.CharStreams;
 import org.antlr.v4.runtime.CommonTokenStream;
 import org.antlr.v4.runtime.tree.ParseTree;
 
 import org.apache.commons.io.FileUtils;
+import org.json.JSONObject;
 
 import com.java.r2pgdm.CompositeForeignKey;
 import com.java.r2pgdm.InputConnection;
@@ -55,6 +65,9 @@ public class PGSchema {
     @Setter
     String schema;
 
+    private static Map<String, Set<String>> nodes = new HashMap<>();
+    private static Map<String, Set<String>> edges = new HashMap<>();
+
     /**
      * Constructs a new `PGSchema` object with the specified schema name, database
      * metadata, and target database connection.
@@ -81,6 +94,8 @@ public class PGSchema {
         schema = createType("GraphType");
         schema += EOF();
         cleanupSchema();
+
+        compareSchemaAndTarget();
 
         // System.out.println("\nOutput - Schema:\n");
         // System.out.println(schema);
@@ -251,6 +266,167 @@ public class PGSchema {
         this.schema = sb.toString();
     }
 
+    private void compareSchemaAndTarget() {
+        // Read the json file
+        String content = null;
+        try {
+            content = new String(Files.readAllBytes(Paths.get("exports/combined.json")));
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+
+        String[] lines = content.split("\n");
+
+        for (String line : lines) {
+            JSONObject jsonObject = new JSONObject(line);
+            String type = jsonObject.getString("type");
+
+            if (type.equals("node")) {
+                parseNode(jsonObject);
+            } else if (type.equals("relationship")) {
+                parseEdge(jsonObject);
+            }
+        }
+
+        // Parse the schema
+        Map<String, Set<String>> schemaNodes = new HashMap<>();
+        Map<String, Set<String>> schemaEdges = new HashMap<>();
+
+        parseSchema(schema, schemaNodes, schemaEdges);
+
+        // Compare nodes and edges with schema
+        compareWithSchema(schemaNodes, schemaEdges);
+    }
+
+    private static void parseNode(JSONObject jsonObject) {
+        String label = jsonObject.getJSONArray("labels").getString(0);
+        JSONObject properties = jsonObject.getJSONObject("properties");
+
+        // Retrieve or create a set to represent the node properties for the label
+        Set<String> propertiesSet = nodes.computeIfAbsent(label, k -> new HashSet<String>());
+
+        // Add properties to the set
+        for (String key : properties.keySet()) {
+            propertiesSet.add(key);
+        }
+    }
+
+    private static void parseEdge(JSONObject jsonObject) {
+        String label = jsonObject.getString("label");
+        JSONObject start = jsonObject.getJSONObject("start");
+        JSONObject end = jsonObject.getJSONObject("end");
+        JSONObject properties = jsonObject.getJSONObject("properties");
+
+        // Create a map to represent the relationship
+        Set<String> propertiesSet = edges.computeIfAbsent(label, k -> new HashSet<String>());
+
+        // Add properties to the set
+        for (String key : properties.keySet()) {
+            propertiesSet.add(key);
+        }
+
+        // relationshipMap.put("start_id", start.getString("id"));
+        // relationshipMap.put("end_id", end.getString("id"));
+
+    }
+
+    private static void parseSchema(String schema, Map<String, Set<String>> schemaNodes,
+            Map<String, Set<String>> schemaEdges) {
+        // Regular expressions to extract node and edge definitions
+        Pattern nodePattern = Pattern.compile("\\((\\w+Type): (\\w+) \\{([^}]*)}");
+        Pattern edgePattern = Pattern
+                .compile("\\(\\:[a-zA-Z]+Type\\)\\-\\[([a-zA-Z\\-]+):\\s+([a-zA-Z\\-]+)\\]\\->\\(\\:[a-zA-Z]+Type\\)");
+
+        Matcher nodeMatcher = nodePattern.matcher(schema);
+        while (nodeMatcher.find()) {
+            String nodeType = nodeMatcher.group(2);
+            String properties = nodeMatcher.group(3);
+
+            Set<String> propertiesSet = new HashSet<>(Arrays.asList(properties.split(",\\s*")));
+
+            // From every property, only get the label and not the type. e.g. Capital INT ->
+            // Capital
+            Set<String> newPropertiesSet = new HashSet<>();
+            for (String property : propertiesSet) {
+                newPropertiesSet.add(property.split(" ")[0]);
+            }
+
+            schemaNodes.put(nodeType, newPropertiesSet);
+        }
+
+        // TODO: Fix edges not being parsed correctly
+        Matcher edgeMatcher = edgePattern.matcher(schema);
+        while (edgeMatcher.find()) {
+            String edgeType = edgeMatcher.group(2);
+            schemaEdges.put(edgeType, new HashSet<>());
+        }
+    }
+
+    private static void compareWithSchema(Map<String, Set<String>> schemaNodes, Map<String, Set<String>> schemaEdges) {
+        // Compare node types
+
+        // Nodes and schemaNodes must be the same, thus also the count of labels
+        if (nodes.size() != schemaNodes.size()) {
+            System.out.println("!! Node types do not match schema.");
+            System.out.println("Node types: " + nodes.keySet());
+            System.out.println("Schema node types: " + schemaNodes.keySet());
+        }
+
+        // Same for edges
+        if (edges.size() != schemaEdges.size()) {
+            System.out.println("!! Edge types do not match schema.");
+            System.out.println("Edge types: " + edges.keySet());
+            System.out.println("Schema edge types: " + schemaEdges.keySet());
+        }
+
+        for (String nodeType : schemaNodes.keySet()) {
+            if (nodes.containsKey(nodeType)) {
+                Set<String> nodeProperties = nodes.get(nodeType);
+                Set<String> schemaProperties = schemaNodes.get(nodeType);
+
+                List<String> sortedNodeProperties = new ArrayList<>(nodeProperties);
+                Collections.sort(sortedNodeProperties);
+
+                List<String> sortedSchemaProperties = new ArrayList<>(schemaProperties);
+                Collections.sort(sortedSchemaProperties);
+
+                if (sortedNodeProperties.equals(sortedSchemaProperties)) {
+                    // System.out.println("Node type " + nodeType + " matches schema.");
+                } else {
+                    System.out.println("!! Node type " + nodeType + " does not match schema.");
+                    System.out.println("Node properties: " + sortedNodeProperties);
+                    System.out.println("Schema properties: " + sortedSchemaProperties);
+                }
+            } else {
+                System.out.println("!! Node type " + nodeType + " is missing in parsed data.");
+            }
+        }
+
+        // Compare edge types
+        for (String edgeType : schemaEdges.keySet()) {
+            if (edges.containsKey(edgeType)) {
+                Set<String> edgeProperties = edges.get(edgeType);
+                Set<String> schemaProperties = schemaEdges.get(edgeType);
+
+                List<String> sortedEdgeProperties = new ArrayList<>(edgeProperties);
+                Collections.sort(sortedEdgeProperties);
+
+                List<String> sortedSchemaProperties = new ArrayList<>(schemaProperties);
+                Collections.sort(sortedSchemaProperties);
+
+                if (sortedEdgeProperties.equals(sortedSchemaProperties)) {
+                    // System.out.println("Edge type " + edgeType + " matches schema.");
+                } else {
+                    System.out.println("!! Edge type " + edgeType + " does not match schema.");
+                    System.out.println("Edge properties: " + sortedEdgeProperties);
+                    System.out.println("Schema properties: " + sortedSchemaProperties);
+                }
+            } else {
+                System.out.println("!! Edge type " + edgeType + " is missing in parsed data.");
+            }
+        }
+    }
+
     public void exportGraph(String filePath) {
         // Export schema to file path with .pgs extension
         try {
@@ -275,7 +451,7 @@ public class PGSchema {
             System.err.println("\nOutput - Syntax errors found in schema");
             System.out.println(tree.toStringTree(parser));
         } else {
-            System.out.println("\nOutput - Generated schema is valid");
+            System.out.println("Output - Generated schema is valid");
         }
     }
 

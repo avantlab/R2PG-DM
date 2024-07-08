@@ -25,7 +25,7 @@ public class InputConnection {
     private char _Quoting = '`';
 
     // Connection conn;
-    ConnectionPool connectionPool;
+    public ConnectionPool connectionPool;
 
     Map<String, Object> progressMap = new HashMap<>();
 

@@ -170,7 +170,7 @@ public class App {
             System.out.println("Mapping - Edges created");
 
             // Create edges with properties
-            System.out.println("Mapping - Creating edges without properties for tables: " + joinTables.keySet());
+            System.out.println("Mapping - Creating edges with properties for tables: " + joinTables.keySet());
             joinTables.forEach((k, v) -> tFinished
                     .add(executorService.submit(() -> OutputConnection.createEdgesAndProperties(outputConn, k, v))));
             awaitTableCompletion(tFinished);

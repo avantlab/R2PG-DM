@@ -795,16 +795,21 @@ public class InputConnection {
             while (rs_1.next()) {
                 Integer id = Identifier.id(
                         Optional.empty(), Optional.empty());
+                Integer id_2 = Identifier.id(
+                        Optional.empty(), Optional.empty());
                 String tNodeId_1 = rs_1.getString("targetId_1");
                 String tNodeId_2 = rs_1.getString("targetId_2");
 
                 Edge e = new Edge(id.toString(), tNodeId_1, tNodeId_2, tableName);
+                Edge e2 = new Edge(id_2.toString(), tNodeId_2, tNodeId_1, tableName);
 
                 properties.addAll(createProperties(rs_1, rs_1Md, id.toString()));
+                properties.addAll(createProperties(rs_1, rs_1Md, id_2.toString()));
                 edges.add(e);
+                edges.add(e2);
                 count++;
 
-                if (edges.size() >= batchSize) {
+                if (edges.size() / 2 >= batchSize) {
                     OutputConnection.insertEdgeRows(edges);
                     OutputConnection.insertPropertyRow(properties);
                     edges.clear();

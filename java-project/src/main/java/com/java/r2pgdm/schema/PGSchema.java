@@ -358,7 +358,8 @@ public class PGSchema {
         // Regular expressions to extract node and edge definitions
         Pattern nodePattern = Pattern.compile("\\((\\w+Type): (\\w+) \\{([^}]*)}");
         Pattern edgePattern = Pattern
-                .compile("\\(\\:[a-zA-Z]+Type\\)\\-\\[([a-zA-Z\\-]+):\\s+([a-zA-Z\\-]+)\\]\\->\\(\\:[a-zA-Z]+Type\\)");
+                .compile(
+                        "\\(\\:[a-zA-Z]+Type\\)\\-\\[([a-zA-Z_\\-]+):\\s+([a-zA-Z_\\-]+)(?:\\s*\\{[^}]*\\})?\\]\\->\\(\\:[a-zA-Z]+Type\\)");
 
         Matcher nodeMatcher = nodePattern.matcher(schema);
         while (nodeMatcher.find()) {
@@ -381,7 +382,6 @@ public class PGSchema {
         while (edgeMatcher.find()) {
             String edgeType = edgeMatcher.group(2);
 
-            Set<String> newPropertiesSet = new HashSet<>();
             Set<String> startNodeLabelsSet = new HashSet<>();
             Set<String> endNodeLabelsSet = new HashSet<>();
 
@@ -403,6 +403,13 @@ public class PGSchema {
             startNodeLabels.put(edgeType, startNodeLabelsSet);
             endNodeLabels.put(edgeType, endNodeLabelsSet);
 
+            Set<String> newPropertiesSet = new HashSet<>();
+            String propertiesString = edgeMatcher.group(0).split("\\{")[1].split("\\}")[0];
+            String[] propertiesArray = propertiesString.split(",");
+            for (String property : propertiesArray) {
+                newPropertiesSet.add(property.trim());
+            }
+
             schemaEdges.put(edgeType, newPropertiesSet);
         }
     }
@@ -411,7 +418,7 @@ public class PGSchema {
         // Compare node types
 
         // Nodes and schemaNodes must be the same, thus also the count of labels
-        if (nodes.size() >= schemaNodes.size()) {
+        if (nodes.size() > schemaNodes.size()) {
             valid = false;
             System.out.println("!! Node types do not match schema.");
             System.out.println("Node types: " + nodes.keySet());
@@ -419,7 +426,7 @@ public class PGSchema {
         }
 
         // Same for edges
-        if (edges.size() >= schemaEdges.size()) {
+        if (edges.size() > schemaEdges.size()) {
             valid = false;
             System.out.println("!! Edge types do not match schema.");
             System.out.println("Edge types: " + edges.keySet());

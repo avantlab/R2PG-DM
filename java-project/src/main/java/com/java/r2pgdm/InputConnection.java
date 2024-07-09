@@ -670,7 +670,8 @@ public class InputConnection {
 
             if (!edges.isEmpty()) {
                 OutputConnection.insertEdgeRows(edges);
-                System.out.println("Mapping - Added " + count + " edges for table " + tableName);
+                System.out.println("Mapping - Added " + count + " edges for table " + tableName + ": for "
+                        + cfk.sourceTable + " and " + cfk.targetTable);
             }
 
             edges.clear();

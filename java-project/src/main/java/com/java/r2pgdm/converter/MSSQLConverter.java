@@ -44,6 +44,8 @@ public class MSSQLConverter implements SQLConverter {
             columnType = "geography";
             // } else if (columnType.contains("nvarchar") & (columnSize > 7999)) {
             // columnType = "varbinary(max)";
+        } else if (columnType.contains("image")) {
+            columnType = "varbinary(max)"; // "varbinary(max)
         }
 
         StringBuilder columnDefinition = new StringBuilder(columnName + " " + columnType);
@@ -96,6 +98,12 @@ public class MSSQLConverter implements SQLConverter {
                 stmt.setBinaryStream(columnIndex, blob.getBinaryStream(), (int) blob.length());
             } else if (value instanceof byte[]) {
                 stmt.setBytes(columnIndex, (byte[]) value);
+            } else if (metaData.getColumnTypeName(columnIndex).toLowerCase().contains("image")) {
+                if (value != null) {
+                    stmt.setBinaryStream(columnIndex, ((Blob) value).getBinaryStream(), (int) ((Blob) value).length());
+                } else {
+                    stmt.setNull(columnIndex, java.sql.Types.BLOB);
+                }
             } else {
                 stmt.setObject(columnIndex, value);
             }

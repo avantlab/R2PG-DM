@@ -65,6 +65,10 @@ public class PGSchema {
     @Setter
     String schema;
 
+    @Getter
+    @Setter
+    static Boolean valid;
+
     private static Map<String, Set<String>> nodes = new HashMap<>();
     private static Map<String, Set<String>> edges = new HashMap<>();
     private static Map<String, String> nodeLabels = new HashMap<>();
@@ -325,7 +329,7 @@ public class PGSchema {
         JSONObject end = jsonObject.getJSONObject("end");
         JSONObject properties = jsonObject.getJSONObject("properties");
 
-        // TODO: Get the labels from the start and end node from the schema and compare
+        // Get the labels from the start and end node from the schema and compare
         // them to the labels in the json object
         String id_start = start.getString("id");
         String id_end = end.getString("id");
@@ -407,14 +411,16 @@ public class PGSchema {
         // Compare node types
 
         // Nodes and schemaNodes must be the same, thus also the count of labels
-        if (nodes.size() != schemaNodes.size()) {
+        if (nodes.size() >= schemaNodes.size()) {
+            valid = false;
             System.out.println("!! Node types do not match schema.");
             System.out.println("Node types: " + nodes.keySet());
             System.out.println("Schema node types: " + schemaNodes.keySet());
         }
 
         // Same for edges
-        if (edges.size() != schemaEdges.size()) {
+        if (edges.size() >= schemaEdges.size()) {
+            valid = false;
             System.out.println("!! Edge types do not match schema.");
             System.out.println("Edge types: " + edges.keySet());
             System.out.println("Schema edge types: " + schemaEdges.keySet());
@@ -431,14 +437,16 @@ public class PGSchema {
                 List<String> sortedSchemaProperties = new ArrayList<>(schemaProperties);
                 Collections.sort(sortedSchemaProperties);
 
-                if (sortedNodeProperties.equals(sortedSchemaProperties)) {
+                if (schemaProperties.containsAll(nodeProperties)) {
                     // System.out.println("Node type " + nodeType + " matches schema.");
                 } else {
+                    valid = false;
                     System.out.println("!! Node type " + nodeType + " does not match schema.");
                     System.out.println("Node properties: " + sortedNodeProperties);
                     System.out.println("Schema properties: " + sortedSchemaProperties);
                 }
             } else {
+                valid = false;
                 System.out.println("!! Node type " + nodeType + " is missing in parsed data.");
             }
         }
@@ -474,10 +482,11 @@ public class PGSchema {
                 List<String> sortedSchemaEndNodeLabels = new ArrayList<>(schemaEndNodeLabelsSet);
                 Collections.sort(sortedSchemaEndNodeLabels);
 
-                if (sortedStartNodeLabels.equals(sortedSchemaStartNodeLabels)
-                        && sortedEndNodeLabels.equals(sortedSchemaEndNodeLabels)) {
+                if (sortedStartNodeLabels.containsAll(sortedSchemaStartNodeLabels)
+                        && sortedEndNodeLabels.containsAll(sortedSchemaEndNodeLabels)) {
                     // System.out.println("Edge type " + edgeType + " matches schema.");
                 } else {
+                    valid = false;
                     System.out.println("!! Edge type " + edgeType + " does not match schema.");
                     System.out.println("Edge start node labels: " + sortedStartNodeLabels);
                     System.out.println("Edge end node labels: " + sortedEndNodeLabels);
@@ -485,14 +494,16 @@ public class PGSchema {
                     System.out.println("Schema end node labels: " + sortedSchemaEndNodeLabels);
                 }
 
-                if (sortedEdgeProperties.equals(sortedSchemaProperties)) {
+                if (sortedSchemaProperties.containsAll(sortedEdgeProperties)) {
                     // System.out.println("Edge type " + edgeType + " matches schema.");
                 } else {
+                    valid = false;
                     System.out.println("!! Edge type " + edgeType + " does not match schema.");
                     System.out.println("Edge properties: " + sortedEdgeProperties);
                     System.out.println("Schema properties: " + sortedSchemaProperties);
                 }
             } else {
+                valid = false;
                 System.out.println("!! Edge type " + edgeType + " is missing in parsed data.");
             }
         }
@@ -521,6 +532,9 @@ public class PGSchema {
         if (parser.getNumberOfSyntaxErrors() > 0) {
             System.err.println("\nOutput - Syntax errors found in schema");
             System.out.println(tree.toStringTree(parser));
+        } else if (valid == false) {
+            System.out.println(
+                    "Output - Generated schema is valid, but not the whole schema is represented in the target database.");
         } else {
             System.out.println("Output - Generated schema is valid");
         }
@@ -561,6 +575,7 @@ public class PGSchema {
 
         // SQL Server to GraphQL
         MapToGQL.put("nvarchar", "String");
+        MapToGQL.put("varbinary", "String");
         MapToGQL.put("nchar", "String");
         MapToGQL.put("text", "String");
         MapToGQL.put("bit", "Boolean");

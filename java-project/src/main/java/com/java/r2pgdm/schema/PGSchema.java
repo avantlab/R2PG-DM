@@ -67,6 +67,11 @@ public class PGSchema {
 
     private static Map<String, Set<String>> nodes = new HashMap<>();
     private static Map<String, Set<String>> edges = new HashMap<>();
+    private static Map<String, String> nodeLabels = new HashMap<>();
+    private static Map<String, Set<String>> edgeStartLabels = new HashMap<>();
+    private static Map<String, Set<String>> edgeEndLabels = new HashMap<>();
+    private static Map<String, Set<String>> startNodeLabels = new HashMap<>();
+    private static Map<String, Set<String>> endNodeLabels = new HashMap<>();
 
     /**
      * Constructs a new `PGSchema` object with the specified schema name, database
@@ -302,6 +307,9 @@ public class PGSchema {
         String label = jsonObject.getJSONArray("labels").getString(0);
         JSONObject properties = jsonObject.getJSONObject("properties");
 
+        // Add every id and label to the nodeLabels map
+        nodeLabels.put(jsonObject.getString("id"), label);
+
         // Retrieve or create a set to represent the node properties for the label
         Set<String> propertiesSet = nodes.computeIfAbsent(label, k -> new HashSet<String>());
 
@@ -317,17 +325,28 @@ public class PGSchema {
         JSONObject end = jsonObject.getJSONObject("end");
         JSONObject properties = jsonObject.getJSONObject("properties");
 
+        // TODO: Get the labels from the start and end node from the schema and compare
+        // them to the labels in the json object
+        String id_start = start.getString("id");
+        String id_end = end.getString("id");
+
+        // Retrieve the node labels for the start and end node
+        String label_start = nodeLabels.get(id_start);
+        String label_end = nodeLabels.get(id_end);
+
         // Create a map to represent the relationship
         Set<String> propertiesSet = edges.computeIfAbsent(label, k -> new HashSet<String>());
+        Set<String> edgeStartLabelsSet = edgeStartLabels.computeIfAbsent(label, k -> new HashSet<String>());
+        Set<String> edgeEndLabelsSet = edgeEndLabels.computeIfAbsent(label, k -> new HashSet<String>());
 
         // Add properties to the set
         for (String key : properties.keySet()) {
             propertiesSet.add(key);
         }
 
-        // relationshipMap.put("start_id", start.getString("id"));
-        // relationshipMap.put("end_id", end.getString("id"));
-
+        // Add start and end labels to the set
+        edgeStartLabelsSet.add(label_start);
+        edgeEndLabelsSet.add(label_end);
     }
 
     private static void parseSchema(String schema, Map<String, Set<String>> schemaNodes,
@@ -354,11 +373,33 @@ public class PGSchema {
             schemaNodes.put(nodeType, newPropertiesSet);
         }
 
-        // TODO: Fix edges not being parsed correctly
         Matcher edgeMatcher = edgePattern.matcher(schema);
         while (edgeMatcher.find()) {
             String edgeType = edgeMatcher.group(2);
-            schemaEdges.put(edgeType, new HashSet<>());
+
+            Set<String> newPropertiesSet = new HashSet<>();
+            Set<String> startNodeLabelsSet = new HashSet<>();
+            Set<String> endNodeLabelsSet = new HashSet<>();
+
+            // Get the node types of the start and end nodes and put them in
+            // schemaEdgeNodeLabels where the start node is the first (\\:[a-zA-Z]+Type\\)
+            // and the end node the last
+
+            String startNode = edgeMatcher.group(0).split("-")[0];
+            String endNode = edgeMatcher.group(0).split("->")[1];
+
+            // Replace the : and (:) with nothing
+            startNode = startNode.replace(":", "").replace("(", "").replace(")", "").replace("Type", "");
+            endNode = endNode.replace(":", "").replace("(", "").replace(")", "").replace("Type", "");
+
+            // Add the start and end node labels to the set
+            startNodeLabelsSet.add(startNode);
+            endNodeLabelsSet.add(endNode);
+
+            startNodeLabels.put(edgeType, startNodeLabelsSet);
+            endNodeLabels.put(edgeType, endNodeLabelsSet);
+
+            schemaEdges.put(edgeType, newPropertiesSet);
         }
     }
 
@@ -413,6 +454,36 @@ public class PGSchema {
 
                 List<String> sortedSchemaProperties = new ArrayList<>(schemaProperties);
                 Collections.sort(sortedSchemaProperties);
+
+                // Compare the start and end node labels
+                Set<String> startNodeLabelsSet = edgeStartLabels.get(edgeType);
+                Set<String> endNodeLabelsSet = edgeEndLabels.get(edgeType);
+
+                Set<String> schemaStartNodeLabelsSet = startNodeLabels.get(edgeType);
+                Set<String> schemaEndNodeLabelsSet = endNodeLabels.get(edgeType);
+
+                List<String> sortedStartNodeLabels = new ArrayList<>(startNodeLabelsSet);
+                Collections.sort(sortedStartNodeLabels);
+
+                List<String> sortedEndNodeLabels = new ArrayList<>(endNodeLabelsSet);
+                Collections.sort(sortedEndNodeLabels);
+
+                List<String> sortedSchemaStartNodeLabels = new ArrayList<>(schemaStartNodeLabelsSet);
+                Collections.sort(sortedSchemaStartNodeLabels);
+
+                List<String> sortedSchemaEndNodeLabels = new ArrayList<>(schemaEndNodeLabelsSet);
+                Collections.sort(sortedSchemaEndNodeLabels);
+
+                if (sortedStartNodeLabels.equals(sortedSchemaStartNodeLabels)
+                        && sortedEndNodeLabels.equals(sortedSchemaEndNodeLabels)) {
+                    // System.out.println("Edge type " + edgeType + " matches schema.");
+                } else {
+                    System.out.println("!! Edge type " + edgeType + " does not match schema.");
+                    System.out.println("Edge start node labels: " + sortedStartNodeLabels);
+                    System.out.println("Edge end node labels: " + sortedEndNodeLabels);
+                    System.out.println("Schema start node labels: " + sortedSchemaStartNodeLabels);
+                    System.out.println("Schema end node labels: " + sortedSchemaEndNodeLabels);
+                }
 
                 if (sortedEdgeProperties.equals(sortedSchemaProperties)) {
                     // System.out.println("Edge type " + edgeType + " matches schema.");

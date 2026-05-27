@@ -1,5 +1,6 @@
 package com.java.r2pgdm;
 
+import java.io.File;
 import java.io.FileWriter;
 import java.io.IOException;
 import java.sql.Connection;
@@ -24,11 +25,11 @@ class Export {
      * Exports generated graph data to csv files
      */
     static void generateCSVs(String path) {
-        generateCSV(OutputConnection.retrieveNodeData(), path.concat("\\nodes.csv"),
+        generateCSV(OutputConnection.retrieveNodeData(), new File(path, "nodes.csv").getPath(),
                 new String[] { "nodeid", "label" });
-        generateCSV(OutputConnection.retrievePropertyData(), path.concat("\\properties.csv"),
+        generateCSV(OutputConnection.retrievePropertyData(), new File(path, "properties.csv").getPath(),
                 new String[] { "propid", "key", "value" });
-        generateCSV(OutputConnection.getEdgeData(), path.concat("\\edges.csv"),
+        generateCSV(OutputConnection.getEdgeData(), new File(path, "edges.csv").getPath(),
                 new String[] { "edgeid", "srcid", "tgtid", "label" });
     }
 
@@ -56,7 +57,7 @@ class Export {
      */
     static void generateJSONGraph(String path, InputConnection conn) {
         outputConn = conn;
-        String jsonFilePath = path.concat("\\combined.json");
+        String jsonFilePath = new File(path, "combined.json").getPath();
         JsonFactory jsonFactory = new JsonFactory();
 
         try (FileWriter fileWriter = new FileWriter(jsonFilePath);

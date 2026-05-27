@@ -753,7 +753,10 @@ public class InputConnection {
         if (dbType.equalsIgnoreCase("mssql")) {
             return " CAST(p.pvalue AS " + column + ") ";
         } else {
-            return column;
+            // For other dialects (sqlite, postgresql, mysql) just return the raw
+            // column reference. The original code returned the literal "VARCHAR(MAX)"
+            // string, which parses as an unknown column name and crashes the query.
+            return "p.pvalue";
         }
     }
 

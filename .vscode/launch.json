@@ -2,16 +2,20 @@
     "configurations": [
         {
             "type": "java",
-            "name": "CodeLens (Launch) - App",
+            "name": "App",
             "request": "launch",
-            "mainClass": "com.java.r2pgdm.App"
+            "mainClass": "com.java.r2pgdm.App",
+            "projectName": "r2pgdm"
         },
         {
             "type": "java",
             "name": "CodeLens (Launch) - App",
             "request": "launch",
             "mainClass": "com.java.r2pgdm.App",
-            "projectName": "java-project"
+            "projectName": "java-project",
+            "vmArgs": [
+                "-Djava.library.path=${workspaceFolder}"
+            ]
         }
     ]
 }

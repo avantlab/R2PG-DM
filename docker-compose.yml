@@ -1,0 +1,56 @@
+version: '2.0'
+services:
+  app:
+    build: .
+    depends_on:
+      - mysql
+      - postgresdb
+
+  mysql:
+    image: mysql:8.0
+    ports:
+      - "3307:3307"
+    environment:  # MySQL requires environment variables to set passwords, etc.
+      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD} # Please set this in your .env file
+      MYSQL_DATABASE: ${MYSQL_DATABASE} # Please set this in your .env file
+    volumes:
+      - mysql-data:/var/lib/mysql
+
+  postgresdb:
+    image: postgres
+    ports:
+      - "5432:5432"
+    environment:  # Postgres also requires environment variables for initial setup
+      POSTGRES_DB: ${POSTGRES_DB} # Please set this in your .env file
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD} # Please set this in your .env file
+    volumes:
+      - postgresdb-data:/var/lib/postgresql
+
+  avantgraph:
+    image: lsiecker/avantgraph:latest
+    ports:
+      - "7689:7689"
+    privileged: true
+    ulimits: 
+      memlock: "1024000"
+    command: ["ag-server", "--listen", "0.0.0.0:7689", "output_graph/"]
+    restart: "on-failure"
+    volumes:
+      - avantgraph-data:/var/lib/avantgraph
+
+  mssql:
+    image: mcr.microsoft.com/mssql/server:2022-latest
+    restart: "on-failure"
+    ports:
+      - "1433:1433"
+    environment:
+      SA_PASSWORD: ${MSSQL_SA_PASSWORD} # Please set this in your .env file
+      ACCEPT_EULA: "Y"
+    volumes:
+      - mssql-data:/var/lib/mssql
+
+volumes:
+  mysql-data:
+  postgresdb-data:
+  avantgraph-data:
+  mssql-data:

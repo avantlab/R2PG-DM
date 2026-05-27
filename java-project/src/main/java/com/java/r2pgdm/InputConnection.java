@@ -47,6 +47,8 @@ public class InputConnection {
             this.dbType = "mssql";
         } else if (driver.contains("postgresql")) {
             this.dbType = "postgresql";
+        } else if (driver.contains("sqlite")) {
+            this.dbType = "sqlite";
         } else {
             this.dbType = "unknown";
         }
@@ -171,6 +173,10 @@ public class InputConnection {
                 return "SELECT TABLE_SCHEMA, TABLE_NAME FROM INFORMATION_SCHEMA.VIEWS WHERE TABLE_SCHEMA = DATABASE()";
             case "postgresql":
                 return "SELECT TABLE_SCHEMA, TABLE_NAME FROM INFORMATION_SCHEMA.VIEWS WHERE table_catalog = current_database() AND table_schema NOT IN ('pg_catalog', 'information_schema')";
+            case "sqlite":
+                // SQLite has no INFORMATION_SCHEMA; views live in sqlite_master.
+                // It also has no per-DB schema concept, so emit an empty schema column.
+                return "SELECT '' AS TABLE_SCHEMA, name AS TABLE_NAME FROM sqlite_master WHERE type='view'";
             default:
                 throw new IllegalArgumentException("Unsupported database type: " + dbType);
         }

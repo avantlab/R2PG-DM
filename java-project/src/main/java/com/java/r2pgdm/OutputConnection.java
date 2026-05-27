@@ -319,37 +319,25 @@ public class OutputConnection {
      * Calculates and prints some statistics about the generated output data
      */
     static void printStatistics() {
-        String sql = "";
-        if (driver.equals("com.microsoft.sqlserver.jdbc.SQLServerDriver") || driver.equals("mssql-jdbc")) {
-            sql = "SELECT COUNT(*) as stats_edge FROM dbo.edge UNION SELECT COUNT(*) AS stats_nodes FROM dbo.node UNION SELECT COUNT(*) AS stats_prop FROM dbo.property;";
-        } else {
-            sql = "SELECT COUNT(*) as stats_edge FROM edge UNION SELECT COUNT(*) AS stats_nodes FROM node UNION SELECT COUNT(*) AS stats_prop FROM property;";
-        }
-        List<String> results = new ArrayList<>();
-
+        String prefix = (driver.equals("com.microsoft.sqlserver.jdbc.SQLServerDriver")
+                || driver.equals("mssql-jdbc")) ? "dbo." : "";
+        Connection localConn = null;
         try {
-            conn = connectionPool.getConnection();
-            Statement stmt = conn.createStatement();
-            ResultSet values = stmt.executeQuery(sql);
-            while (values.next()) {
-                results.add(values.getString(1));
-            }
+            localConn = connectionPool.getConnection();
+            System.out.println("\n# Nodes: " + countRows(localConn, prefix + "node"));
+            System.out.println("# Properties: " + countRows(localConn, prefix + "property"));
+            System.out.println("# Edges: " + countRows(localConn, prefix + "edge"));
         } catch (SQLException e) {
-            System.out.println(sql);
             e.printStackTrace();
         } finally {
-            if (results.size() > 0) {
-                System.out.println("\n# Nodes: ".concat(results.get(1)));
-            }
+            if (localConn != null) connectionPool.free(localConn);
+        }
+    }
 
-            if (results.size() > 1) {
-                System.out.println("# Properties: ".concat(results.get(2)));
-            }
-
-            if (results.size() > 2) {
-                System.out.println("# Edges: ".concat(results.get(0)));
-            }
-            connectionPool.free(conn);
+    private static long countRows(Connection c, String table) throws SQLException {
+        try (Statement st = c.createStatement();
+             ResultSet rs = st.executeQuery("SELECT COUNT(*) FROM " + table)) {
+            return rs.next() ? rs.getLong(1) : 0L;
         }
     }
 

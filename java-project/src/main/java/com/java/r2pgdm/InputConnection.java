@@ -822,10 +822,12 @@ public class InputConnection {
 
             if (!edges.isEmpty()) {
                 OutputConnection.insertEdgeRows(edges);
+                OutputConnection.insertPropertyRow(properties);
                 System.out.println("Added " + count + " Edges for table " + tableName);
             }
 
             edges.clear();
+            properties.clear();
             rs_1.close();
             connectionPool.free(conn);
         } catch (SQLException e) {

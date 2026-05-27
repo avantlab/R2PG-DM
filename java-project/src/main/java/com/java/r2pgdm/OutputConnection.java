@@ -141,8 +141,14 @@ public class OutputConnection {
                 // Cell might contain null, in which case we don't want to add a property to the
                 // node
                 if (attributeValue != null) {
-                    properties.add(new Property(nodeIdentifier, attributeName,
-                            attributeValue.toString().replaceAll("[, ' \"]", "").strip()));
+                    // Strip chars that would break the unquoted CSV writer (commas, quotes,
+                    // newlines). Spaces and apostrophes are preserved -- the previous version
+                    // dropped them too, which silently mangled values like
+                    // "A Wizard of Earthsea" into "AWizardofEarthsea".
+                    String sanitized = attributeValue.toString()
+                            .replaceAll("[,\"\\r\\n]", "")
+                            .strip();
+                    properties.add(new Property(nodeIdentifier, attributeName, sanitized));
                 }
             }
         } catch (SQLException e) {

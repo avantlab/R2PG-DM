@@ -87,14 +87,23 @@ public class PGSchema {
      * @param joinTables
      * @param tables
      */
+    /** Directory containing the combined.json this schema is compared against. */
+    private String exportDir = "exports";
+
     public PGSchema(String schemaName, DatabaseMetaData metadata, InputConnection targetDatabase, List<String> tables,
             Map<String, List<CompositeForeignKey>> joinTables, List<CompositeForeignKey> fks) {
+        this(schemaName, metadata, targetDatabase, tables, joinTables, fks, "exports");
+    }
+
+    public PGSchema(String schemaName, DatabaseMetaData metadata, InputConnection targetDatabase, List<String> tables,
+            Map<String, List<CompositeForeignKey>> joinTables, List<CompositeForeignKey> fks, String exportDir) {
         this.schemaName = schemaName;
         this.metadata = metadata;
         this.targetDatabase = targetDatabase;
         this.tables = tables;
         this.joinTables = joinTables;
         this.compositeForeignKeys = fks;
+        this.exportDir = exportDir;
 
         createSchema();
     }
@@ -279,7 +288,7 @@ public class PGSchema {
         // Read the json file
         String content = null;
         try {
-            content = new String(Files.readAllBytes(Paths.get("exports/combined.json")));
+            content = new String(Files.readAllBytes(new File(exportDir, "combined.json").toPath()));
         } catch (IOException e) {
             e.printStackTrace();
         }
@@ -519,7 +528,7 @@ public class PGSchema {
     public void exportGraph(String filePath) {
         // Export schema to file path with .pgs extension
         try {
-            FileUtils.writeStringToFile(new File(filePath + "\\schema.pgs"), schema, "UTF-8");
+            FileUtils.writeStringToFile(new File(filePath, "schema.pgs"), schema, "UTF-8");
         } catch (IOException e) {
             e.printStackTrace();
         }

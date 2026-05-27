@@ -7,9 +7,9 @@
 ![GitHub Actions Workflow Status](https://img.shields.io/github/actions/workflow/status/lsiecker/r2pg-dm/maven.yml)
 
 ![MicrosoftSQLServer](https://img.shields.io/badge/Microsoft%20SQL%20Server-CC2927?style=for-the-badge&logo=microsoft%20sql%20server&logoColor=white)
-![MySQL](https://img.shields.io/badge/mysql-4479A1.svg?style=for-the-badge&logo=mysql&logoColor=white) 
-<!-- ![SQLite](https://img.shields.io/badge/sqlite-%2307405e.svg?style=for-the-badge&logo=sqlite&logoColor=white) 
-![Postgres](https://img.shields.io/badge/postgres-%23316192.svg?style=for-the-badge&logo=postgresql&logoColor=white) -->
+![MySQL](https://img.shields.io/badge/mysql-4479A1.svg?style=for-the-badge&logo=mysql&logoColor=white)
+![SQLite](https://img.shields.io/badge/sqlite-%2307405e.svg?style=for-the-badge&logo=sqlite&logoColor=white)
+![Postgres](https://img.shields.io/badge/postgres-%23316192.svg?style=for-the-badge&logo=postgresql&logoColor=white)
 
 
 # R2PG-DM
@@ -19,27 +19,35 @@ R2PG-DM is a powerful tool that allows you to construct property graphs from rel
 ## Table of Contents
 
 1. [Features](#features)
-2. [Installation](#installation)
-3. [Configuration](#configuration)
-4. [Usage](#usage)
-5. [Neo4j Integration](#neo4j-integration)
-6. [Troubleshooting](#troubleshooting)
-7. [Contributing](#contributing)
+2. [Requirements](#requirements)
+3. [Installation](#installation)
+4. [Configuration](#configuration)
+5. [Usage](#usage)
+6. [Neo4j Integration](#neo4j-integration)
+7. [Troubleshooting](#troubleshooting)
+8. [Contributing](#contributing)
+9. [Acknowledgements](#acknowledgements)
 
 ## Features
 
 - Convert relational databases into property graphs
-- Support for MySQL and Microsoft SQL Server databases
-- Generate CSV files for Neo4j graph database
-- Generate schema following PG-Schema language
+- Support for Microsoft SQL Server, MySQL, PostgreSQL, and SQLite source databases
+- Generate CSV files (`nodes.csv`, `edges.csv`, `properties.csv`) for downstream graph engines
+- Generate `combined.json` for direct import into AvantGraph
+- Generate a graph schema in the PG-Schema language
+
+## Requirements
+
+- Java 21+ (the build targets Java 21)
+- Apache Maven 3.9+
 
 ## Installation
 
 To install R2PG-DM, follow these steps:
 
-1. Clone the repository: `git clone https://github.com/lsiecker/r2pg-dm.git`
-2. Navigate into the project directory: `cd r2pg-dm`
-3. Build the R2PG-DM using Maven: `mvn clean build`
+1. Clone the repository: `git clone https://github.com/avantlab/R2PG-DM.git`
+2. Navigate into the project directory: `cd R2PG-DM`
+3. Build the project with Maven: `mvn -f java-project/pom.xml clean package`
 
 ## Configuration
 
@@ -90,3 +98,7 @@ If you encounter any issues while using R2PG-DM, please check the Issues page of
 
 ## Contributing
 We welcome contributions to R2PG-DM! If you'd like to contribute, please fork the repository, make your changes, and open a pull request.
+
+## Acknowledgements
+
+This work was supported by the European Union's Horizon Europe research and innovation programme under grant agreement **No. 101058573** ([SciLake](https://scilake.eu/)).

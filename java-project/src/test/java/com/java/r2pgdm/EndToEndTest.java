@@ -102,6 +102,22 @@ public class EndToEndTest {
         }
     }
 
+    @Test
+    public void retrieveViewNamesWorksOnSqlite() throws Exception {
+        // Stand up a view on the fixture and confirm retrieveViewNames picks it
+        // up via the sqlite branch of getViewNamesSQL().
+        String jdbcUrl = "jdbc:sqlite:" + dbFile.getAbsolutePath();
+        try (Connection c = DriverManager.getConnection(jdbcUrl);
+             Statement s = c.createStatement()) {
+            s.executeUpdate("CREATE VIEW recent_books AS SELECT * FROM books WHERE id >= 10");
+        }
+        InputConnection in = new InputConnection(jdbcUrl, "fixture", "sqlite", null);
+        List<String> views = in.retrieveViewNames();
+        in.connectionPool.closeAllConnections();
+        assertTrue("expected recent_books view, got: " + views,
+                views.stream().anyMatch(v -> v.endsWith("recent_books")));
+    }
+
     @After
     public void tearDown() throws Exception {
         // Best-effort recursive delete.

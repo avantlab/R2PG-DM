@@ -33,18 +33,22 @@ public class App {
 
     /**
      * Main method to start the data migration process.
-     * 
-     * @param args Command-line arguments (not used)
+     *
+     * @param args Command-line arguments: args[0] = config .ini path (optional,
+     *             defaults to configs/mssql/world.ini), args[1] = export directory
+     *             (optional, defaults to "exports")
      */
     public static void main(String[] args) {
+        File ini = args.length > 0 ? new File(args[0]) : new File("configs/mssql/world.ini");
+        String exportDir = args.length > 1 ? args[1] : "exports";
         // Shutdown hook to close database connections when the application is exits.
         Runtime.getRuntime().addShutdownHook(new Thread() {
             public void run() {
-                if (inputConn.connectionPool.availableConnections.size()
+                if (inputConn != null && inputConn.connectionPool.availableConnections.size()
                         + inputConn.connectionPool.busyConnections.size() > 0) {
                     inputConn.connectionPool.closeAllConnections();
                 }
-                if (outputConn.connectionPool.availableConnections.size()
+                if (outputConn != null && outputConn.connectionPool.availableConnections.size()
                         + outputConn.connectionPool.busyConnections.size() > 0) {
                     outputConn.connectionPool.closeAllConnections();
                 }
@@ -52,12 +56,30 @@ public class App {
         });
 
         try {
+            run(ini, exportDir);
+        } catch (IOException e) {
+            e.printStackTrace();
+        } finally {
+            System.exit(0);
+        }
+    }
+
+    /**
+     * Run the full RDB-to-PG mapping pipeline. Exposed so tests (or library users)
+     * can drive it without going through main()'s System.exit.
+     *
+     * @param iniFile   path to the .ini config file
+     * @param exportDir directory to write nodes.csv / edges.csv / properties.csv /
+     *                  combined.json / schema.pgs into
+     */
+    public static void run(File iniFile, String exportDir) throws IOException {
+        try {
 
             // Start the timer to keep track of the duration of the mapping process.
             Long start = System.currentTimeMillis();
 
             // Read the configuration from the .ini file.
-            Wini ini = new Wini(new File("configs/mssql/world.ini"));
+            Wini ini = new Wini(iniFile);
             Config input = GetConfiguration(ini.get("input"));
             Config output = GetConfiguration(ini.get("output"));
             Config mapping = GetConfiguration(ini.get("mapping"));
@@ -195,20 +217,20 @@ public class App {
                     TimeUnit.MILLISECONDS.toMillis(elapsedTime) % 1000);
 
             // Generate output files
+            new File(exportDir).mkdirs();
             System.out.println("\nOutput - Creating CSV files for Nodes, Properties and Edges");
-            Export.generateCSVs("exports");
+            Export.generateCSVs(exportDir);
             System.out.println("Output - CSV files generated");
-            Export.generateJSONGraph("exports", outputConn);
+            Export.generateJSONGraph(exportDir, outputConn);
             System.out.println("Output - JSON file generated");
-            PGSchema schema = new PGSchema(mapping.schema, metaData, outputConn, tables, joinTables, foreignKeys);
+            PGSchema schema = new PGSchema(mapping.schema, metaData, outputConn, tables, joinTables, foreignKeys,
+                    exportDir);
             schema.validateSchema();
-            schema.exportGraph("exports");
+            schema.exportGraph(exportDir);
             System.out.println("Output - Schema file generated");
-
-        } catch (IOException e) {
-            e.printStackTrace();
         } finally {
-            System.exit(0);
+            if (inputConn != null) inputConn.connectionPool.closeAllConnections();
+            if (outputConn != null) outputConn.connectionPool.closeAllConnections();
         }
     }
 

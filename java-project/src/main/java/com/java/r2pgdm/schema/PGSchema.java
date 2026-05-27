@@ -67,7 +67,7 @@ public class PGSchema {
 
     @Getter
     @Setter
-    static Boolean valid;
+    static Boolean valid = true;
 
     private static Map<String, Set<String>> nodes = new HashMap<>();
     private static Map<String, Set<String>> edges = new HashMap<>();
@@ -292,10 +292,14 @@ public class PGSchema {
         } catch (IOException e) {
             e.printStackTrace();
         }
+        if (content == null) {
+            return; // combined.json is generated alongside the schema; skip diffing if absent
+        }
 
         String[] lines = content.split("\n");
 
         for (String line : lines) {
+            if (line == null || line.trim().isEmpty()) continue;
             JSONObject jsonObject = new JSONObject(line);
             String type = jsonObject.getString("type");
 
@@ -413,10 +417,13 @@ public class PGSchema {
             endNodeLabels.put(edgeType, endNodeLabelsSet);
 
             Set<String> newPropertiesSet = new HashSet<>();
-            String propertiesString = edgeMatcher.group(0).split("\\{")[1].split("\\}")[0];
-            String[] propertiesArray = propertiesString.split(",");
-            for (String property : propertiesArray) {
-                newPropertiesSet.add(property.trim());
+            String[] braceSplit = edgeMatcher.group(0).split("\\{");
+            if (braceSplit.length > 1) {
+                String propertiesString = braceSplit[1].split("\\}")[0];
+                String[] propertiesArray = propertiesString.split(",");
+                for (String property : propertiesArray) {
+                    newPropertiesSet.add(property.trim());
+                }
             }
 
             schemaEdges.put(edgeType, newPropertiesSet);

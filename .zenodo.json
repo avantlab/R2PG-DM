@@ -1,0 +1,43 @@
+{
+  "title": "R2PG-DM: Relational to Property Graph Direct Mapping",
+  "description": "<p>R2PG-DM is an open-source Java tool that constructs property graphs from relational databases via a direct mapping. It supports Microsoft SQL Server, MySQL, PostgreSQL, and SQLite source databases; produces <code>nodes.csv</code>/<code>edges.csv</code>/<code>properties.csv</code> outputs, a <code>combined.json</code> for direct import into AvantGraph, and a PG-Schema graph schema; identifies join tables and maps them to edges with properties; and supports progressive execution for enterprise-scale datasets.</p>",
+  "upload_type": "software",
+  "access_right": "open",
+  "license": "MIT",
+  "creators": [
+    {
+      "name": "Stoica, Radu Alexandru"
+    },
+    {
+      "name": "Siecker, Luc",
+      "affiliation": "Eindhoven University of Technology"
+    },
+    {
+      "name": "Yakovets, Nikolay",
+      "affiliation": "Eindhoven University of Technology"
+    },
+    {
+      "name": "Sadoughi, Sepehr",
+      "affiliation": "Eindhoven University of Technology"
+    },
+    {
+      "name": "Fletcher, George H. L.",
+      "affiliation": "Eindhoven University of Technology"
+    }
+  ],
+  "keywords": [
+    "relational to graph",
+    "property graph",
+    "direct mapping",
+    "schema mapping",
+    "knowledge graph construction",
+    "PG-Schema"
+  ],
+  "grants": [
+    {"id": "10.13039/501100000780::101058573"}
+  ],
+  "communities": [
+    {"identifier": "scilake_project"},
+    {"identifier": "eu"}
+  ]
+}
